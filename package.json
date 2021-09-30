@@ -1,0 +1,29 @@
+{
+  "name": "@nicklasbns/imagedecoder",
+  "version": "0.1.0",
+  "description": "decodes png images and gets the mean color of png images",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicklasbns/imageDecoder.git"
+  },
+  "keywords": [
+    "png",
+    "decode",
+    "mean",
+    "color",
+    "image"
+  ],
+  "author": "nicklasbns",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nicklasbns/imageDecoder/issues"
+  },
+  "homepage": "https://github.com/nicklasbns/imageDecoder#readme",
+  "dependencies": {
+    "pako": "^2.0.4"
+  }
+}

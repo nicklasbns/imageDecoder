@@ -24,7 +24,7 @@ module.exports.mean = mean;
  * If successful, returns an `array` of 4 `numbers` in RGBA format
  * 
  * ```js
- * var imageDecoder = require("nameUndetermined.js");
+ * var imageDecoder = require("@nicklasbns/imagedecoder");
  * 
  * let meanColor = await imageDecoder.mean(url).catch((e) => {
  *   console.log("Error:", e);
@@ -55,7 +55,7 @@ async function mean(url) {
  * @returns {Promise<imageData>} Object of type `imageData`
  * @example
  * ```js
- * var imageDecoder = require("nameUndetermined.js");
+ * var imageDecoder = require("@nicklasbns/imagedecoder");
  * 
  * let image = await imageDecoder.decode(url).catch((e) => {
  *   console.log("Error:", e);
@@ -86,7 +86,6 @@ return new Promise(async (respond, reject) => {
     var base = [], pixels = [];
 
     if (png.subarray(0, 8).join() != "137,80,78,71,13,10,26,10") {
-        console.error("fucky wucky");
         reject("this file is not a vaild png")
         return
     }
@@ -113,7 +112,7 @@ return new Promise(async (respond, reject) => {
                 }
                 break
             case "PLTE":
-                reject("this image uses a palette, i have not added support for this yet:tm:")
+                reject("this image uses a palette, i have not added support for this yet:tm: (dm me nicklasbns#8693)")
                 break
             case "IDAT":
                 base.push(...png.subarray(i+8, i+8+length));
@@ -210,7 +209,7 @@ async function download(url) {
         if (url.split(":")[0] == "https") {
             https.get(url, {} , async data => {
                 let array = new Uint8Array();
-                    
+                
                 data.on("data", data => {
                     array = new Uint8Array([...array, ...data]);
                 });
@@ -218,6 +217,8 @@ async function download(url) {
             }).on("error", e => {
                 reject(e)
             });
+        } else if (url.split(":")[0] == "http") {
+            reject("Does not support http")
         } else {
             fs.readFile(url, {}, (err, data) => {
                 if (err) reject(err)
