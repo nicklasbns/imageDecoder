@@ -79,14 +79,14 @@ async function mean(url) {
 async function decode(url) {
 return new Promise(async (respond, reject) => {
     var png = await download(url).catch((e) => {
-        reject({text: "could not download the file: ", e})
+        reject(e);
     });
     if (!png) return
     var imageData = {};
     var base = [], pixels = [];
 
     if (png.subarray(0, 8).join() != "137,80,78,71,13,10,26,10") {
-        reject("this file is not a vaild png")
+        reject(new Error("This file is not a vaild png"));
         return
     }
     var i = 8;
@@ -102,28 +102,29 @@ return new Promise(async (respond, reject) => {
                     color: png[i+17], // 1: palette, 2: color, 4: alpha
                 }
                 // console.log(imageData);
-                if (imageData.color == 6) {
-                    imageData.channels = 4;
-                }else if (imageData.color == 2) {
-                    imageData.channels = 3;
-                } else {
-                    reject("unsupported color-type")
+                if (png[i+20] == 1) {
+                    reject(new Error("This image is fucking interlaced you stoopid"));
                     return
                 }
-                if (png[i+20] == 1) {
-                    reject("this image is fucking interlaced you stoopid")
+                if (imageData.color == 6) {
+                    imageData.channels = 4;
+                } else if (imageData.color == 2) {
+                    imageData.channels = 3;
+                } else if (imageData.color == 3) {
+                    reject(new Error("This image uses a palette, i have not added support for this yet:tm: (dm me nicklasbns#8693)"));
+                } else {
+                    reject(new Error("Unsupported color-type: " + imageData.color + ". (dm me nicklasbns#8693 if you want support for this color type)"));
                     return
                 }
                 break
             case "PLTE":
-                reject("this image uses a palette, i have not added support for this yet:tm: (dm me nicklasbns#8693)")
                 break
             case "IDAT":
                 base.push(...png.subarray(i+8, i+8+length));
                 break
             case "IEND":
                 var baseData = pako.inflate(base);
-                pixels = decodeIDAT(baseData, imageData.width*imageData.depth*imageData.channels/8, imageData.height, imageData.channels);
+                pixels = decodeIDAT(baseData, imageData.width*imageData.depth*imageData.channels/8, imageData.height, imageData.channels, reject);
                 break
             default:
                 // console.log(String.fromCharCode(...png.subarray(i+4, i+8)));
@@ -144,7 +145,7 @@ return new Promise(async (respond, reject) => {
 });
 }
 
-function decodeIDAT(data, length, height, channels) {
+function decodeIDAT(data, length, height, channels, reject) {
     var bytes = []
     for (let j = 0; j < height; j++) {
         let scanline = new Uint8Array(data.subarray(j*(length+1)+1, (j+1)*(length+1)));
@@ -198,8 +199,9 @@ function decodeIDAT(data, length, height, channels) {
                 }
                 break
             default:
-                reject(`unsupported filter(${data[j*(length+1)]}) on ${j}th scanline`)
-                return
+                reject(new Error(`Unsupported filter(${data[j*(length+1)]}) on ${j}th scanline.
+This should never happen since all fliters should be supported. dm me nicklasbns#8693`));
+                return []
         }
     }
     return bytes
@@ -217,18 +219,18 @@ async function download(url) {
                 });
                 data.on("end", () => {res(array)});
             }).on("error", e => {
-                reject(e)
+                reject(e);
             });
         } else if (url.split(":")[0] == "http") {
-            reject("Does not support http")
+            reject(new Error("Does not support http"));
         } else {
             fs.readFile(url, {}, (err, data) => {
-                if (err) reject(err)
+                if (err) reject(err);
                 res(data);
             })
         }
     } catch(e) {
-        reject(e)
+        reject(e);
     }
     });
 }
