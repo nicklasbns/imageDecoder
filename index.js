@@ -102,7 +102,11 @@ return new Promise(async (respond, reject) => {
                     color: png[i+17], // 1: palette, 2: color, 4: alpha
                 }
                 // console.log(imageData);
-                if (imageData.color != 6) {
+                if (imageData.color == 6) {
+                    imageData.channels = 4;
+                }else if (imageData.color == 2) {
+                    imageData.channels = 3;
+                } else {
                     reject("unsupported color-type")
                     return
                 }
@@ -119,7 +123,7 @@ return new Promise(async (respond, reject) => {
                 break
             case "IEND":
                 var baseData = pako.inflate(base);
-                pixels = decodeIDAT(baseData, imageData.width*imageData.depth*4/8, imageData.height);
+                pixels = decodeIDAT(baseData, imageData.width*imageData.depth*imageData.channels/8, imageData.height, imageData.channels);
                 break
             default:
                 // console.log(String.fromCharCode(...png.subarray(i+4, i+8)));
@@ -128,21 +132,19 @@ return new Promise(async (respond, reject) => {
         i += length+12;
     }
 
-    for (let i = 0; i < pixels.length/4; i++) {
-        pixels[i] = [
-            pixels[i*4+0],
-            pixels[i*4+1],
-            pixels[i*4+2],
-            pixels[i*4+3]
-        ];
+    var pixels2 = []
+    for (let i = 0; i < pixels.length/imageData.channels; i++) {
+        pixels2[i] = []
+        for (let j = 0; j < imageData.channels; j++) {
+            pixels2[i][j] = pixels[i*imageData.channels+j];
+        }
     }
-    pixels = pixels.slice(0, pixels.length/4);
-    imageData.data = pixels
+    imageData.data = pixels2
     respond(imageData);
 });
 }
 
-function decodeIDAT(data, length, height) {
+function decodeIDAT(data, length, height, channels) {
     var bytes = []
     for (let j = 0; j < height; j++) {
         let scanline = new Uint8Array(data.subarray(j*(length+1)+1, (j+1)*(length+1)));
@@ -155,7 +157,7 @@ function decodeIDAT(data, length, height) {
                 break
             case 1:
                 for (let k = 0; k < length; k++) {
-                    let a = k>3 ? bytes[start+k-4] : 0;
+                    let a = k>channels-1 ? bytes[start+k-channels] : 0;
                     bytes.push((a+scanline[k])%256);
                 }
                 break
@@ -167,7 +169,7 @@ function decodeIDAT(data, length, height) {
                 break
             case 3:
                 for (let k = 0; k < length; k++) {
-                    let a = k>3 ? bytes[start+k-4] : 0;
+                    let a = k>channels-1 ? bytes[start+k-channels] : 0;
                     let b = j ? bytes[start+k-length] : 0;
                     let avg = Math.floor((a+b)/2);
                     bytes.push((avg+scanline[k])%256);
@@ -176,9 +178,9 @@ function decodeIDAT(data, length, height) {
             case 4:
                 for (let k = 0; k < length; k++) {
                     let abs = Math.abs;
-                    let a = k>3 ? bytes[start+k-4] : 0;
+                    let a = k>channels-1 ? bytes[start+k-channels] : 0;
                     let b = j ? bytes[start+k-length] : 0;
-                    let c = k>3&&j ? bytes[start+k-length-4] : 0;
+                    let c = k>channels-1&&j ? bytes[start+k-length-channels] : 0;
                     let p = a + b - c
                     if (abs(p-a) > abs(p-b)) {
                         if (abs(p-b) > abs(p-c)) {
@@ -209,7 +211,7 @@ async function download(url) {
         if (url.split(":")[0] == "https") {
             https.get(url, {} , async data => {
                 let array = new Uint8Array();
-                
+                    
                 data.on("data", data => {
                     array = new Uint8Array([...array, ...data]);
                 });
